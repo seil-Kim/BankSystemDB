@@ -1,0 +1,16 @@
+drop table BankSystem;
+
+create table BankSystem(
+    bid varchar2(10) constraint PK_BankID primary key,
+    bpwd varchar2(4) not null,
+    bname varchar2(20) not null,
+    balance number(10, 0) not null,
+    bvip varchar2(20) not null
+);
+
+insert into BankSystem
+values('a', 'a', '홍길동', '1000', 'n');
+
+commit;
+
+select * from BankSystem;
