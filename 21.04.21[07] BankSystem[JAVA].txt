@@ -1,0 +1,311 @@
+package Bank;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.Scanner;
+
+import com.sun.crypto.provider.RSACipher;
+import com.sun.org.apache.regexp.internal.RE;
+
+public class BankSystem {
+	public Scanner scanner = new Scanner(System.in);
+	public int inputInt() {return scanner.nextInt();}
+	public String inputStr() {return scanner.next();}
+
+   public static void main(String[] args) throws Exception {
+	   BankSystem bapp = new BankSystem();
+	   bapp.menu();	
+      }
+   
+public void menu() throws Exception {
+	
+    System.out.println("BankSystem Ver. 2.1");
+    System.out.println("====================");
+    System.out.println("[1] 고객 정보 입력");
+    System.out.println("[2] 입금 처리");
+    System.out.println("[3] 출금 처리");
+    System.out.println("[4] 고객 정보 조회");
+    System.out.println("[5] 전 고객 정보 출력");
+    System.out.println("[6] 프로그램 종료");
+    System.out.println("====================");
+    System.out.println("Select Menu : ");
+    
+    int selecNo = inputInt();
+    
+    switch(selecNo) {
+    	case 1:
+    		System.out.println("고객 정보 입력");
+    		addCust();
+    		break;
+    	case 2:
+    		System.out.println("입금 처리");
+    		addBalance();
+    		break;
+    	case 3:
+    		System.out.println("출금 처리");
+    		subBalance();
+    		break;
+    	case 4:
+    		System.out.println("고객 정보 조회");
+    		printCust();
+    		break;
+    	case 5:
+    		System.out.println("전 고객 정보 출력");
+    		//printAll();
+    		break;
+    	case 6:
+    		System.out.println("프로그램을 종료합니다.");
+    		System.exit(0);
+    		break;
+    }
+    menu();
+}
+public void addCust() throws Exception {
+	
+	System.out.print("\nID를 입력하세요: ");
+	String id = inputStr();
+	String pw = null, pw2 = null;
+	boolean result = searchId(id);
+	if(result) {
+		System.out.println("이미 가입된 계정 입니다.");
+	}else {
+		do {
+			System.out.print("PW를 입력하세요: ");
+			pw = inputStr();
+			System.out.print("PW를 재입력하세요: ");
+			pw2 = inputStr();
+		}while(!pw.equals(pw2));
+		
+		System.out.print("이름을 입력하세요: ");
+		String name = inputStr();
+		System.out.print("금액을 입력하세요: ");
+		int balance = inputInt();
+		System.out.print("우수고객 등록(y/n) : ");
+		String vip = null;
+		boolean vip_checked = false;
+	
+		
+		do {
+			vip = inputStr();
+			
+			switch(vip) {
+			case"Y":
+			case"y":
+				vip = "우수고객";
+				vip_checked = true;
+				break;
+			case"N":
+			case"n":
+				vip = "일반고객";
+				vip_checked = true;
+				break;
+			default:
+				System.out.println("잘못 입력, 다시 입력하세요");
+			}
+		}while(vip_checked == false);
+		Customer cust = new Customer();
+		cust.setId(id);
+		cust.setPw(pw);
+		cust.setVip(vip);
+		cust.setBalance(balance);
+		cust.setName(name);
+		insertCust(cust);
+	}
+	System.out.println("\n");
+}
+private void insertCust(Customer cust) throws Exception {
+
+	Connection con = DBCon.getCon();
+	
+	String sql = "insert into BankSystem(bid, bpwd, bname, bvip, balance)"
+			+ " values('" + cust.getId() + "','" + cust.getPw() + "','"
+			+ cust.getName() + "','"  + cust.getVip() + "'," +
+			cust.getBalance() + ")";
+	Statement stmt = con.createStatement();
+	stmt.executeUpdate(sql);
+	DBCon.close(con,  stmt,  null);
+	
+}
+public boolean searchId(String arg_id) throws Exception{
+	   boolean result = false;
+	   Connection con = DBCon.getCon();
+	   
+	   String sq1 = "select * from BankSystem where bid = '"+ arg_id + "'";
+	   Statement stmt = con.createStatement();
+	   ResultSet rs = stmt.executeQuery(sq1);
+	   
+	   if(rs.next())
+	      result = true;
+	   else
+	      result = false;
+	   DBCon.close(con,  stmt,  rs);
+	   return(result);
+}
+public boolean addBalance() throws Exception {
+	Customer customer = search();
+	if(customer != null) {
+		int balance = customer.getBalance();
+		System.out.println("현재 잔액 : "+ balance);
+		System.out.print("금액을 입력하세요: ");
+		int input_balance = inputInt();
+		balance += input_balance;
+		updateCust(customer.getId(), balance);
+		System.out.println("입금 후 잔액 : "+ balance);
+	}
+	return false;
+}
+private void updateCust(String id, int balance) throws Exception {
+
+	Connection con = DBCon.getCon();
+	
+	String sql = "update BankSystem set balance=" + balance
+			+ " where bid='" + id + "'";
+	Statement stmt = con.createStatement();
+	stmt.executeUpdate(sql);
+	DBCon.close(con,  stmt,  null);	
+}
+public Customer search() throws Exception {
+	System.out.print("\nID를 입력하세요: ");
+	String id = inputStr();
+	System.out.print("PW를 입력하세요: ");
+	String pw = inputStr();
+		
+	Customer customer = new Customer();
+	
+	customer = readCust2(id, pw);
+	//customer = readCust(id);
+	
+	if(customer == null) {
+		System.out.println("해당 ID나 pw가 일치하지 않습니다.");
+	}
+	/*int result = 0;
+	
+	if(customer != null) {
+		if(customer.getPw().equals(pw)) {
+			result = 1;
+		}else {
+			System.out.println("암호가 틀렸습니다.");
+			result = 2;
+			customer = null;
+		}
+	}else {
+		System.out.println("해당 ID가 존재하지 않습니다");
+	}*/
+	return(customer);
+}
+/*private Customer readCust(String arg_id) throws Exception {
+	
+	Customer cust = new Customer();
+	Connection con = DBCon.getCon();
+	
+	String sql = "select * from BankSystem where bid = '"+ arg_id + "'";
+	Statement stmt = con.createStatement();
+	ResultSet rs = stmt.executeQuery(sql);
+	
+	if(rs.next()) {
+		cust.setId(rs.getString(1));
+		cust.setPw(rs.getString(2));
+		cust.setName(rs.getString(3));
+		cust.setBalance(rs.getInt(4));
+		cust.setVip(rs.getString(5));
+	}else {
+		cust = null;
+	}
+	DBCon.close(con, stmt, rs);
+	return(cust);
+}*/
+private Customer readCust2(String id, String pw) throws Exception {
+	
+	Customer cust = new Customer();
+	Connection con = DBCon.getCon();
+	
+	String sql = "select * from BankSystem where bid = '"+ id + "' and bpwd = '"+pw+"'";
+	Statement stmt = con.createStatement();
+	ResultSet rs = stmt.executeQuery(sql);
+	
+	if(rs.next()) {
+		cust.setId(rs.getString(1));
+		cust.setPw(rs.getString(2));
+		cust.setName(rs.getString(3));
+		cust.setBalance(rs.getInt(4));
+		cust.setVip(rs.getString(5));
+	}else {
+		cust = null;
+	}
+	DBCon.close(con, stmt, rs);
+	return(cust);
+}
+public boolean subBalance() throws Exception {
+	Customer customer = search();
+	int input_balance;
+	if(customer != null) {
+		int balance = customer.getBalance();
+		System.out.println("현재 잔액 : "+ balance);
+		int cost = (customer.getVip().equals("우수고객"))? 0 : 500;
+		
+		do {
+			System.out.print("금액을 입력하세요: ");
+			input_balance = inputInt();
+			if(input_balance + cost > balance) {
+				System.out.println("금액이 잔액 보다 큽니다.");
+			}
+		}while(input_balance+cost > balance);
+		balance = balance - input_balance - cost;
+		updateCust(customer.getId(), balance);
+		System.out.println("수수료 : "+ cost);
+		System.out.println("출금 후 잔액 : "+ balance);
+	}
+	return false;
+}
+public void printCust() throws Exception {
+	boolean result = true;
+	Customer customer = search();
+	do {
+		if(customer.getId() != null) {
+			titlePrint();
+			custInfo(customer);
+		}
+		System.out.println("\n계속하시겠습니까? (y/n)");
+		String yn = inputStr();
+		if(yn.equals("y") || yn.equals("Y")) {
+			printCust();
+		}else {
+			result = false;
+		}
+	}while(result != false);
+	
+	menu();
+}
+/*public void printAll(String id) throws Exception {
+	Customer cust = new Customer();
+	Connection con = DBCon.getCon();
+	
+	
+	
+	titlePrint();
+	
+	while(next()){
+		String sql = "select * from BankSystem where bid = '"+ id + "'";
+		Statement stmt = con.createStatement();
+		ResultSet rs = stmt.executeQuery(sql);
+	};
+	System.out.println("\n");
+}*/
+public void titlePrint() {
+	System.out.println("\n");
+	System.out.println("\n\t\t고 객  정 보");
+	System.out.println("============================");
+	System.out.println("ID\t 이름\t 금액 \tVIP");
+	System.out.println("============================");
+}
+
+public void custInfo(Customer c) {
+	System.out.print(c.getId()+"\t");
+	System.out.print(c.getName()+"\t");
+	System.out.print(c.getBalance()+"\t");
+	System.out.print(c.getVip()+"\t");
+	System.out.println();
+}
+
+}
